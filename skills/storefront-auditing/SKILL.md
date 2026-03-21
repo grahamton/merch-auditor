@@ -7,7 +7,7 @@ description: >
   what changed on a site", "build a dossier on", "monitor this storefront", or needs expert
   evaluation of any online storefront's UX, messaging, conversion rate optimization, competitive
   positioning, or ongoing site research.
-version: 0.3.0
+version: 0.4.0
 ---
 
 # Storefront Auditing
@@ -83,7 +83,7 @@ Sum to a total out of 40. Provide an overall letter grade:
 
 ## Persona Routing
 
-Select the audit persona based on `fingerprint.commerceMode.mode` from the scrape response:
+Select the audit persona based on `payload.commerce.mode` from the scrape response:
 
 | Commerce mode | Persona | Focus |
 |--------------|---------|-------|
@@ -104,9 +104,7 @@ Never skip these steps. A research archive only has value if it accumulates.
 
 ## PDP Spot-Check
 
-When auditing a category or search results page, always scrape 2 PDPs from the result set:
-- One mid-range product
-- One premium or featured product
+When auditing a category or search results page, `acquire(url, pdp_sample=2)` automatically samples 2 PDPs (one mid-range, one premium). The results are in `payload.pdpSamples[]`. Review:
 
 Compare what the PDP shows vs. what the listing card implied. Common gaps:
 - Description fill rate (is `description` == `title`? That's 0% fill.)
@@ -123,11 +121,11 @@ Every audit runs two parallel analyses before scoring: what the **API/data layer
 
 Before evaluating what the user sees, inspect what the platform *has available*:
 
-1. Call `scrape_page` with `include_screenshot: true` and `mobile_screenshot: true`
-2. Examine `networkIntel` in the scrape response — look for detected commerce APIs (Algolia, Coveo, Elasticsearch, SFCC, Shopify Storefront API)
-3. Check `facets` in the response: note actual facet names, option counts, and whether labels are resolved or show as "Unknown Facet"
-4. Check `dataLayersDetected` and `networkIntel.dataLayer` — confirm ecommerce tracking events are firing
-5. Check `fingerprint.discoveryQuality.facetCount` vs. facets that are labeled and useful
+1. Call `acquire(url, pdp_sample=2)` — this is the single acquisition call; it handles screenshots, PDP sampling, network intel, and data quality scoring automatically
+2. Examine `payload.analytics` — look for detected commerce APIs (Algolia, Coveo, Elasticsearch, SFCC, Shopify Storefront API)
+3. Check `payload.facets`: note actual facet names, option counts, and whether labels are resolved or show as "Unknown Facet"
+4. Check `payload.analytics.dataLayer` — confirm ecommerce tracking events are firing
+5. Check `payload.dataQuality.facetCount` vs. facets that are labeled and useful
 
 ### Phase 1.5 — Direct API Interception (when scraper facets are sparse or unresolved)
 
@@ -147,11 +145,11 @@ See `references/dual-lens-pattern.md` for step-by-step procedure, insight.com ex
 
 Cross-reference the API data against what's actually rendering:
 
-1. `ask_page` — "Describe the filter panel: what facet categories are labeled and visible? How many options are shown per facet?"
+1. Check `payload.navigation` and `payload.facets` in the acquire payload — `navigation.hasFilterPanel`, `facets[].name`, `facets[].options.length`. Use `ask_page` only if the payload doesn't answer the question.
 2. Compare the UI-reported facets against the API facet count from Phase 1 / Phase 1.5
 3. If a gap exists, **first check query construction** before classifying — the UI may simply not be sending browse-mode parameters. If query construction is correct and facets still don't render, log as `[FRONTEND INTEGRATION]`
 4. Take note of mobile screenshot — blank or broken mobile is a complete render failure, not a design issue
-5. Check `fingerprint.funnelReadiness` and `fingerprint.topRisks` for pre-classified issues
+5. Check `payload.dataQuality.topRisks` for pre-classified issues
 
 ### Classifying Findings
 
@@ -169,11 +167,26 @@ This classification makes audit output directly actionable: engineering can fix 
 ## Tool Usage
 
 Use the merch connector tools in this order:
-1. `site_memory` — check for prior context and known rendering quirks
-2. `scrape_page` — get raw content, data layer, network intel, and screenshots (always request `include_screenshot: true` and `mobile_screenshot: true`)
-3. `ask_page` — probe the rendered UI for facet labels, trust signals, and copy quality
-4. `audit_storefront` — run the built-in structured audit
-5. `compare_storefronts` — when running head-to-head comparisons
+1. `site_memory(read)` — check for prior context and known rendering quirks
+2. `acquire(url, pdp_sample=2)` — single call returning complete payload: products, facets, screenshots, navigation, commerce mode, dataQuality, trustSignals, analytics, performance, and PDP samples
+3. `compare_storefronts` — when running head-to-head comparisons (structural diff only, no AI)
+4. `ask_page` — optional; for follow-up questions when the acquire payload doesn't answer a specific question
+5. `site_memory(write)` — persist scores, grades, and top findings after each audit
+
+**Do not call `scrape_page` or `audit_storefront`.** Both are retired/deprecated in merch-connector v2. The `acquire` tool replaces both.
+
+### Warning-to-finding mapping
+
+Map `payload.warnings[]` codes directly to finding tags in the report:
+
+| Warning code | Finding tag | Owner |
+|---|---|---|
+| `NO_PRODUCTS_FOUND` | `[ENGINEERING]` | Bot blocking or wrong page type — skip scoring |
+| `MOBILE_RENDER_FAILED` | `[ENGINEERING]` | Mobile screenshot unavailable |
+| `ECOMMERCE_TRACKING_GAP` | `[FRONTEND INTEGRATION]` | GTM/dataLayer not firing |
+| `LOW_DESCRIPTION_FILL` | `[DATA QUALITY]` | Product copy missing from feed |
+| `LOW_CARD_CONFIDENCE` | `[DATA QUALITY]` | Product card extraction uncertain |
+| `FIRECRAWL_FAILED` | note in report | Acquisition degraded to Puppeteer fallback |
 
 ## Output Principles
 

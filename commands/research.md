@@ -1,10 +1,10 @@
 ---
 description: Build a research dossier on any storefront or URL
-allowed-tools: mcp__merch-connector__scrape_page, mcp__merch-connector__ask_page, mcp__merch-connector__site_memory, Write, Bash
+allowed-tools: mcp__merch-connector__acquire, mcp__merch-connector__site_memory, Write, Bash
 argument-hint: <url> [optional: research question or focus area]
 ---
 
-Build a research dossier on $ARGUMENTS using the merch connector.
+Build a research dossier on $ARGUMENTS using the merch connector v2.
 
 This command is for open-ended site research — competitive analysis, client prep, category benchmarking, or any time you want to accumulate knowledge about a site without running a formal scored audit.
 
@@ -12,30 +12,48 @@ This command is for open-ended site research — competitive analysis, client pr
 
 Call `site_memory(action="read", url=$ARGUMENTS)`. Summarize what's already known. If this is a first visit, note that.
 
-## Step 2 — Scrape and orient
+## Step 2 — Acquire page data
 
-Call `scrape_page(url=$ARGUMENTS, include_screenshot=true, mobile_screenshot=true, max_products=20)`.
+Call `acquire(url=$ARGUMENTS, pdp_sample=1)`.
 
-Produce a concise site profile:
-- **What is this site?** (brand, category, commerce mode, estimated scale)
-- **Platform signals** — detected commerce platform, GTM containers, analytics stack
-- **Product catalog snapshot** — price range, brand mix, product count, SKU depth
-- **Performance** — FCP, load time, mobile rendering status
-- **Discovery quality** — facet count, sort options, search capability
+This returns a rich payload containing:
+- `page` — title, metaDescription, breadcrumb, h1
+- `commerce` — mode (B2C/B2B/Hybrid), platform, priceTransparency
+- `products` — title, price, rating, reviewCount, badges, trustSignals
+- `facets`, `sort`, `performance`, `trustSignals`, `analytics`, `navigation`
+- `dataQuality` — productCount, descriptionFillRate, ratingFillRate
+- `pdpSamples` — light PDP inspection (1 sample requested)
+- `changes` — if prior baseline exists, delta vs. last scrape
+- `siteMemory` — prior notes and scrape count
 
-## Step 3 — Answer the research question
+## Step 3 — Build site profile
 
-If the user provided a specific focus area or question after the URL, use `ask_page` to address it directly. Otherwise, default to these high-value questions:
-- "What is the primary value proposition communicated on this page? Quote the exact headline and any supporting copy."
-- "Describe the checkout/conversion path visible from this page — what are the available CTAs and where do they lead?"
+From the payload, assemble a concise profile:
+- **Brand & commerce mode** — from `payload.commerce.mode`, `payload.commerce.platform`
+- **Catalog snapshot** — `payload.dataQuality.productCount`, top 3 products from `payload.products[]`
+- **Performance** — `payload.performance.fcp`, `payload.performance.loadComplete`
+- **Analytics stack** — `payload.analytics.platforms`, GTM containers
+- **Trust signals** — summary from `payload.trustSignals`
+- **Navigation quality** — facets (`payload.facets.length`), `payload.navigation.hasFilterPanel`, `payload.navigation.hasSearchBar`
+- **Data quality flags** — surface any `payload.warnings[]` entries
 
-## Step 4 — Identify open questions
+## Step 4 — Answer the research question
 
-List 3–5 things you couldn't determine from the scrape that would be valuable to know — pages to visit next, questions to probe deeper, or data that requires login/interaction.
+If the user provided a specific focus area, extract relevant fields from the payload to address it. Otherwise, default to:
+- **Value proposition** — from `payload.page.h1`, `payload.page.metaDescription`, top product titles and badges
+- **Conversion path** — CTAs in product cards, `payload.navigation.hasSearchBar`, facets available for narrowing
 
-## Step 5 — Save the dossier
+## Step 5 — Identify open questions
 
-Use Bash to resolve the workspace path and create the outputs directory:
+List 3–5 things the payload doesn't cover or worth investigating next:
+- PDP depth (reviews, specs, cross-sell — accessible via pdpSamples)
+- Checkout flow (requires interaction, not in acquire)
+- Login/account features (if `payload.commerce.loginRequired` is true)
+- Historical changes (site_memory.scrapeCount — how often does this site update?)
+
+## Step 6 — Save the dossier
+
+Use Bash to resolve the workspace path:
 ```bash
 WS=$(find /sessions/*/mnt -maxdepth 1 -type d -name "Merch-connector" ! -path "*local-plugins*" 2>/dev/null | head -1) && mkdir -p "$WS/outputs" && echo "$WS"
 ```
@@ -53,19 +71,20 @@ Format:
 **Focus:** [research question or "general"]
 
 ## Site Profile
-[platform, commerce mode, catalog snapshot, performance]
+[platform, commerce mode, catalog snapshot, performance, analytics]
 
 ## Key Findings
-[bulleted findings from scrape + ask_page]
+[profile + research question answer, bulleted]
+
+## Data Quality
+[fill rates, warnings, confidence flags]
 
 ## Open Questions
 [things to investigate next]
 
-## Raw Notes
-[anything else worth preserving]
 ---
 
-## Step 6 — Write a note to site_memory
+## Step 7 — Write a note to site_memory
 
 Call `site_memory(action="write", url=$ARGUMENTS, note="Research [date]: [2-sentence summary of what was learned].")`.
 
