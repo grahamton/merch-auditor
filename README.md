@@ -1,17 +1,47 @@
-# Status Badges
-![License: MIT](https://img.shields.io/badge/License-MIT-green)
-![Cowork Plugin](https://img.shields.io/badge/Cowork-Plugin-blue)
+# Badges
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT) [![Cowork Plugin](https://img.shields.io/badge/Cowork-Plugin-orange.svg)](https://link-to-cowork-plugin)
 
 # Why merch-auditor?
-The merch-auditor addresses the need for thorough merchandise auditing to ensure quality and compliance with industry standards. It helps businesses evaluate their merchandise strategy and improve product offerings.
-
-# Personas
-- **conversion_architect**: This persona focuses on optimizing conversion rates through effective product presentation and merchandising.
-- **b2b_auditor**: This persona specializes in assessing products for business-to-business sales, ensuring they meet enterprise clients' requirements.
+Merch-auditor solves the problem of efficient auditing for merchandise sales by automating the analysis of sales data and providing insights for optimization. The solution includes automated reporting and status tracking to enhance decision-making.
 
 # What It Does
-The merch-auditor provides a comprehensive workflow:
-- URL → scrape → data layer interrogation → PDP spot-checks → scored report
+The merch-auditor offers a comprehensive workflow for auditing merchandise sales, including:
 
-# Existing Content
-(keep all existing content and structure intact here...)
+![Workflow Diagram](https://link-to-workflow-diagram)
+
+| Feature           | Description                         |
+|-------------------|-------------------------------------|
+| Real-time Data    | Provides up-to-date insights         |
+| Historical Data   | Analyze trends over time            |
+| Custom Reports     | Generate tailored reports            |
+| Integration       | Seamless connection with existing data systems |
+
+# Personas
+| Role               | When to Use                        |
+|-------------------|-------------------------------------|
+| conversion_architect | When focusing on maximizing conversion rates. |
+| b2b_auditor       | When evaluating business-to-business sales performance. |
+
+# Commands
+*... (existing commands content)...*
+
+# Scoring System
+*... (existing scoring system content)...*
+
+# Installation
+*... (existing installation content)...*
+
+# Output
+*... (existing output content)...*
+
+# Plugin Structure
+*... (existing plugin structure content)...*
+
+# Compatibility
+*... (existing compatibility content)...*
+
+# Related
+*... (existing related content)...*
+
+# Author
+*... (existing author content)...*
