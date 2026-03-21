@@ -15,7 +15,11 @@
   "mcpServers": {
     "merch-connector": {
       "command": "npx",
-      "args": ["-y", "merch-connector@latest"]
+      "args": ["-y", "merch-connector@latest"],
+      "env": {
+        "ANTHROPIC_API_KEY": "",
+        "FIRECRAWL_API_KEY": ""
+      }
     }
   },
   "compatibility": {
