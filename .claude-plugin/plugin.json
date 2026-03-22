@@ -1,6 +1,6 @@
 {
   "name": "merch-auditor",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "description": "Storefront auditing and comparison powered by the merch connector. Analyzes UX, conversion, copy, and competitive positioning.",
   "author": {
     "name": "grahamton"
@@ -16,10 +16,7 @@
     "merch-connector": {
       "command": "npx",
       "args": ["-y", "merch-connector@latest"],
-      "env": {
-        "ANTHROPIC_API_KEY": "",
-        "FIRECRAWL_API_KEY": ""
-      }
+      "env": {}
     }
   },
   "compatibility": {

@@ -7,7 +7,7 @@ description: >
   what changed on a site", "build a dossier on", "monitor this storefront", or needs expert
   evaluation of any online storefront's UX, messaging, conversion rate optimization, competitive
   positioning, or ongoing site research.
-version: 0.5.0
+version: 0.5.1
 requires: merch-connector >= 2.0.0
 ---
 
@@ -135,6 +135,8 @@ Every item in `payload.warnings[]` is a pre-classified finding from the MCP. Map
 | `DESCRIPTIONS_ARE_TITLES` | `[DATA QUALITY]` | Products have no real copy — title used as description |
 | `NO_REVIEWS` | `[STRATEGY]` | Zero review infrastructure across entire catalog |
 | `TEMPLATE_MISMATCH` | `[DATA QUALITY]` | URL resolves to wrong page type (hub vs. PDP, etc.) |
+| `FIRECRAWL_FAILED` | `[FRONTEND INTEGRATION]` | Both Firecrawl and Puppeteer blocked — WAF/bot protection active |
+| `NO_PRODUCTS_FOUND` | `[DATA QUALITY]` | Zero cards detected — blocked render or wrong URL type |
 
 Surface these in the relevant dimension section, not as a separate list.
 
@@ -162,6 +164,7 @@ Tag every finding with its root cause:
 - Tag every finding — untagged findings have no clear owner and won't get fixed
 - Prioritize the Top 5 by estimated impact, not by dimension order
 - For B2B: evaluate `loginRequired`, spec depth, `contractPricingVisible`, and PDP spec fields explicitly
+- When `blocked: true`, score dimensions that rely on live render (UX & Design, mobile performance) conservatively and note the confidence gap explicitly
 
 ---
 
@@ -171,11 +174,54 @@ The entire audit uses 3 MCP calls:
 
 1. `site_memory(action="read")` — load prior context
 2. `acquire(url, pdp_sample=2)` — get everything in one pass
-3. `site_memory(action="write")` — persist scores and findings
+3. If `acquire` returns `blocked: true` → execute **Bot-Block Fallback Protocol** (below)
+4. `site_memory(action="write")` — persist scores and findings
 
-No `scrape_page`, no `ask_page`, no `audit_storefront`, no `merch_roundtable` in the critical path.
+No `scrape_page`, no `audit_storefront`, no `merch_roundtable` in the critical path.
 
 Optional enrichment only: `scrape_pdp` if you need a specific PDP beyond the 2 sampled ones.
+
+---
+
+## Bot-Block Fallback Protocol
+
+If `acquire` returns `blocked: true` or `warnings[]` contains `NO_PRODUCTS_FOUND`, do not stop. Use `fallbackSuggestions[]` from the payload as starting points, then execute:
+
+### Step 1 — URL parameter archaeology
+
+Search for indexed filtered-state URLs: `site:domain.com/category-path`
+
+Parse returned URLs for query parameters that leak the facet schema and search platform:
+- `?facets=fieldname:value` → Coveo field naming
+- `?f12345=value` → Elasticsearch/Bloomreach numeric field IDs
+- `?refinementList[field]=value` → Algolia
+- `?s=RATING`, `?r=48` → sort field names and page size
+
+### Step 2 — Cached page state mining
+
+Search: `domain.com "category name" brand finish "add to cart"`
+
+Extract from snippets:
+- Facet label list
+- Product title patterns (reveals data quality and title format)
+- CTA text variants ("Add to Cart" vs "Configure" vs "See Options")
+- Trust signals ("FREE 2-Day Shipping", review counts)
+
+### Step 3 — SEO meta and category copy
+
+Page title and meta description are almost always indexed even when the rendered page is blocked. These reveal the value proposition and messaging quality.
+
+### Step 4 — Sibling and parent page comparison
+
+Try the parent category or a brand subcategory. These often share the same template and are less aggressively protected.
+
+### Confidence annotation (required)
+
+When fallback methods are used, add this note to the audit header:
+
+> ⚠️ Live render blocked (WAF/bot protection). Category data sourced from Google-indexed page states. Facet schema, product titles, and card-level signals are inferred; live screenshots, mobile render, and data layer inspection are unavailable.
+
+Do not omit dimensions because direct access failed. An inferred finding with a caveat is more useful than a blank section.
 
 ---
 

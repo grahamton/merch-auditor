@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.5.1 — 2026-03-22
+- Bot-Block Fallback Protocol added to `storefront-auditing` skill — 4-step search-based recovery when `acquire` returns `blocked: true` (WAF/Akamai protection)
+- `FIRECRAWL_FAILED` and `NO_PRODUCTS_FOUND` warning codes added to warnings mapping table with finding tags
+- Tool Usage updated: step 3 now branches to Bot-Block Fallback Protocol on `blocked: true`
+- Output Principles: note added to score live-render dimensions conservatively when blocked
+- Requires `merch-connector >= 2.0.9` for `blocked`/`blockType`/`fallbackSuggestions` fields
+- `plugin.json`: removed empty `ANTHROPIC_API_KEY` / `FIRECRAWL_API_KEY` env stubs
+
 ## v0.4.0 — 2026-03-21
 - Added `/research` and `/track` commands
 - Fixed relative `outputs/` path bug (PLUGIN-003)
