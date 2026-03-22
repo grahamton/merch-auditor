@@ -17,12 +17,14 @@ Manual storefront auditing is time-consuming, inconsistent, and fragmented. Merc
 
 ## What It Does
 
-merch-auditor wraps the merch-connector MCP with a structured agent workflow. You point it at a URL, it scrapes the storefront, interrogates the data layer, spot-checks PDPs, and returns a scored audit report saved to your workspace.
+merch-auditor wraps the merch-connector MCP with a structured agent workflow. You point it at a URL, it acquires the full storefront payload in one call, scores four audit dimensions, and saves a report to your workspace.
 
-**Workflow:**
+**Workflow (v2 — 3 MCP calls total):**
 ```
-URL → Scrape & Extract → Data Layer Interrogation → PDP Spot-Checks → Scored Report
+site_memory(read) → acquire(url, pdp_sample=2) → [score offline] → site_memory(write)
 ```
+
+Everything between the acquire and the memory write happens against the local payload — no further live site calls. If the site is bot-protected and the acquire returns `blocked: true`, the agent executes the Bot-Block Fallback Protocol (Google-indexed page states, URL parameter archaeology, sibling page comparison) before reporting.
 
 It handles both **B2C** and **B2B/Hybrid** storefronts, routing to the appropriate analysis persona automatically:
 - B2C → `conversion_architect` (DTC/retail lens)
@@ -77,7 +79,7 @@ Every finding is tagged with its owning team:
 
 ### Requirements
 - [Cowork](https://claude.ai/download) desktop app
-- **merch-connector ≥ 1.8.0** — installed automatically via `npx` when the plugin runs
+- **merch-connector ≥ 2.0.9** — installed automatically via `npx` when the plugin runs
 
 ### Install the plugin
 1. Download or clone this repo
@@ -135,19 +137,19 @@ CHANGELOG.md           ← version history
 
 | Plugin version | merch-connector |
 |----------------|-----------------|
-| v0.4.x | ≥ 1.8.0 |
-| v0.3.x | ≥ 1.6.0 |
+| v0.5.x | ≥ 2.0.9 |
+| v0.4.x | ≥ 1.8.0 (legacy) |
 
 The plugin calls merch-connector via `npx merch-connector@latest` by default. To pin a version, edit `.claude-plugin/plugin.json`:
 ```json
-"args": ["-y", "merch-connector@1.8.0"]
+"args": ["-y", "merch-connector@2.0.12"]
 ```
 
 ---
 
 ## Related
 
-- **[merch-connector](https://github.com/grahamton/merchGent)** — the MCP server this plugin wraps. 13 tools, Puppeteer-based scraping, 5 analysis personas.
+- **[merch-connector](https://github.com/grahamton/merchGent)** — the MCP server this plugin wraps. `acquire` one-pass architecture, Firecrawl + Puppeteer scraping, 5 analysis personas, bot-block detection.
 - Bug reports and roadmap tracked in the [Merch Project Hub](https://www.notion.so/329dee0d562d818a95d7fd5759f0add4) on Notion.
 
 ---
